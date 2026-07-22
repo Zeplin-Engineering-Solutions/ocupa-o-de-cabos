@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeplin · Cálculo de Ocupação de Infraestrutura</title>
+<style>
+  :root{
+    --navy:#151D33;
+    --navy-2:#1E2947;
+    --navy-3:#2B3860;
+    --red:#DA344D;
+    --crimson:#D8334A;
+    --maroon:#6E1A33;
+    --maroon-2:#8A2143;
+    --bg:#F4F6FA;
+    --card:#FFFFFF;
+    --line:#DDE3EE;
+    --text:#151D33;
+    --muted:#65718C;
+    --ok:#1B7F5A;
+    --ok-bg:#E6F5EF;
+    --warn:#9A6B00;
+    --warn-bg:#FDF3DC;
+    --bad:#B32138;
+    --bad-bg:#FCEAED;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",Inter,system-ui,-apple-system,Arial,sans-serif;
+    font-size:15px;line-height:1.5;
+  }
+  header{
+    background:#fff;color:var(--navy);padding:14px 28px;
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    border-bottom:3px solid var(--red);
+  }
+  /* o PNG tem margens brancas largas; a altura maior compensa o vazio */
+  .logo img{display:block;height:68px;width:auto;margin:-10px -6px}
+  .head-sep{width:1px;height:38px;background:var(--line)}
+  .head-title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  .head-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  main{max-width:1180px;margin:0 auto;padding:26px 20px 60px}
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+  @media (max-width:940px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .card h2{
+    margin:0;padding:13px 18px;font-size:13px;font-weight:700;
+    letter-spacing:.09em;text-transform:uppercase;color:#fff;background:var(--navy-2);
+    border-left:4px solid var(--red);
+  }
+  .card .body{padding:18px}
+
+  label{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  select,input{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font-size:14px;font-family:inherit;color:var(--text);background:#fff;
+  }
+  select:focus,input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(218,52,77,.15)}
+  .row{display:grid;gap:12px;margin-bottom:14px}
+  .r2{grid-template-columns:1fr 1fr}
+  .r3{grid-template-columns:1fr 1fr 1fr}
+  @media (max-width:620px){.r2,.r3{grid-template-columns:1fr}}
+
+  fieldset{border:none;margin:0;padding:0}
+  .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg label{flex:1;margin:0;text-align:center;padding:9px 6px;cursor:pointer;
+    font-size:12px;letter-spacing:.04em;color:var(--muted);background:#fff;
+    border-right:1px solid var(--line);transition:.12s}
+  .seg label:last-child{border-right:none}
+  .seg input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+  .seg input:checked + span{color:#fff}
+  .seg label:has(input:checked){background:var(--navy-2);color:#fff}
+
+  .cable-row{
+    padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:#FAFBFD;
+  }
+  .cable-row.compacta{
+    display:grid;grid-template-columns:1.5fr .9fr .8fr 34px;gap:10px;align-items:end;
+  }
+  .cr-l1{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px;align-items:end;margin-bottom:10px}
+  .cr-l2{display:grid;grid-template-columns:1.3fr .9fr .8fr 34px;gap:10px;align-items:end}
+  @media (max-width:620px){
+    .cable-row.compacta{grid-template-columns:1fr 1fr}
+    .cr-l1,.cr-l2{grid-template-columns:1fr 1fr}
+  }
+  .fonte{
+    font-size:11px;color:var(--muted);margin-top:9px;padding-top:8px;
+    border-top:1px dashed var(--line);line-height:1.45;
+  }
+  .cable-row .del{
+    border:1px solid var(--line);background:#fff;color:var(--maroon);border-radius:6px;
+    height:36px;cursor:pointer;font-size:17px;line-height:1;font-weight:700;
+  }
+  .cable-row .del:hover{background:var(--bad-bg);border-color:var(--bad)}
+
+  .btn{
+    border:none;border-radius:6px;padding:11px 20px;font-size:14px;font-weight:700;
+    font-family:inherit;cursor:pointer;letter-spacing:.03em;
+  }
+  .btn-add{background:#fff;color:var(--navy);border:1px dashed var(--navy-3);width:100%}
+  .btn-add:hover{background:#F0F3F9;border-style:solid}
+  .btn-go{background:var(--red);color:#fff;width:100%;padding:14px;font-size:15px;margin-top:6px}
+  .btn-go:hover{background:var(--maroon-2)}
+
+  .verdict{padding:18px;border-radius:8px;margin-bottom:16px;border-left:5px solid}
+  .verdict.ok{background:var(--ok-bg);border-color:var(--ok)}
+  .verdict.warn{background:var(--warn-bg);border-color:var(--warn)}
+  .verdict.bad{background:var(--bad-bg);border-color:var(--bad)}
+  .verdict .tag{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .verdict.ok .tag{color:var(--ok)} .verdict.warn .tag{color:var(--warn)} .verdict.bad .tag{color:var(--bad)}
+  .verdict .big{font-size:29px;font-weight:800;margin:6px 0 2px;letter-spacing:-.02em}
+  .verdict .msg{font-size:14px;color:#3B4763}
+
+  .corte{
+    margin:16px 0 6px;padding:16px 12px 10px;background:#FAFBFD;
+    border:1px solid var(--line);border-radius:8px;text-align:center;
+  }
+  .corte svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .corte-cap{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .corte-cap b{color:var(--text)}
+  .legend{
+    display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;
+    margin-top:12px;font-size:11.5px;color:var(--muted);
+  }
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+  .overflow-note{color:var(--bad);font-weight:700}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tfoot td{font-weight:700;border-bottom:none;border-top:2px solid var(--navy-3)}
+
+  .suggest{margin-top:14px;padding:14px;background:#F0F3F9;border-radius:8px;font-size:13.5px}
+  .suggest strong{color:var(--maroon)}
+  .note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}
+  .note code{background:#EEF1F7;padding:1px 5px;border-radius:3px;font-size:11.5px}
+  .placeholder{color:var(--muted);text-align:center;padding:36px 12px;font-size:14px}
+  .err{background:var(--bad-bg);color:var(--bad);padding:12px;border-radius:6px;font-size:13.5px;margin-bottom:14px}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+  footer{
+    margin-top:26px;padding-top:16px;border-top:1px solid var(--line);
+    display:flex;flex-direction:column;gap:5px;
+    font-size:11.5px;color:var(--muted);line-height:1.5;
+  }
+  footer span:first-child{font-weight:700;color:var(--navy-3)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><img src="logo.png" alt="Zeplin"></div>
+  <div class="head-sep"></div>
+  <div>
+    <div class="head-title">Verificação de Ocupação de Infraestrutura</div>
+    <div class="head-sub">Eletroduto · Eletrocalha · Perfilado — ABNT NBR 5410 e ABNT NBR 16415</div>
+  </div>
+</header>
+
+<main>
+<div class="grid">
+
+  <!-- ENTRADA -->
+  <div class="card">
+    <h2>Dados do projeto</h2>
+    <div class="body">
+
+      <div class="row">
+        <fieldset>
+          <label>Natureza da instalação (define a norma aplicável)</label>
+          <div class="seg" id="segNorma">
+            <label><input type="radio" name="norma" value="eletrica" checked><span>Elétrica — NBR 5410</span></label>
+            <label><input type="radio" name="norma" value="dados"><span>Cabeamento estruturado — NBR 16415</span></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <label style="margin-top:6px">Cabos</label>
+      <div id="cables"></div>
+      <button class="btn btn-add" id="addCable">+ Adicionar outro tipo de cabo</button>
+
+      <div class="row r2" style="margin-top:20px">
+        <div>
+          <label>Tipo de infraestrutura</label>
+          <select id="infraType">
+            <option value="eletroduto">Eletroduto</option>
+            <option value="eletrocalha">Eletrocalha</option>
+            <option value="perfilado">Perfilado</option>
+          </select>
+        </div>
+        <div>
+          <label id="sizeLabel">Bitola planejada</label>
+          <select id="infraSize"></select>
+        </div>
+      </div>
+
+      <div class="row r2" id="dimsRow">
+        <div>
+          <label id="dimALabel">Diâmetro interno (mm)</label>
+          <input type="number" id="dimA" step="0.1" min="1">
+          <div class="hint" id="dimAHint">Editável — use o valor real do catálogo se necessário.</div>
+        </div>
+        <div id="dimBWrap" style="display:none">
+          <label>Altura interna (mm)</label>
+          <input type="number" id="dimB" step="0.1" min="1">
+          <div class="hint">Área útil = largura × altura.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-go" id="calc">Avaliar infraestrutura</button>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card">
+    <h2>Resultado da avaliação</h2>
+    <div class="body" id="out">
+      <div class="placeholder">Informe os cabos e a infraestrutura planejada,<br>depois clique em <b>Avaliar infraestrutura</b>.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>&copy; 2026 Marco Deouro Deritti — todos os direitos reservados.</span>
+  <span>Verificação de ocupação conforme ABNT NBR 5410 e ABNT NBR 16415. A responsabilidade
+        técnica pelo projeto permanece do profissional habilitado.</span>
+</footer>
+</main>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   BASES DE DADOS
+   ============================================================ */
+
+// Cabos de cabeamento estruturado — diâmetros externos de referência
+// ABNT NBR 16415:2015, Tabelas B.1 / B.2 (cabeçalho "Diâmetro externo aproximado do cabo")
+var CABOS_DADOS = [
+  {id:"cat5e",   nome:"CAT 5e",              d:4.8},
+  {id:"cat6",    nome:"CAT 6",               d:6.0},
+  {id:"cat6af",  nome:"CAT 6A (F/UTP)",      d:7.8},
+  {id:"cat6au",  nome:"CAT 6A (U/UTP)",      d:8.6},
+  {id:"cat7",    nome:"CAT 7",               d:9.3},
+  {id:"custom",  nome:"Outro (informar Ø)",  d:null}
+];
+
+// Cabos de energia — catálogo Prysmian "Cabos de Baixa e Média Tensão".
+// Ø externo aproximado, coluna "Diâmetro exterior aproximado" de cada família.
+// Onde a mesma secção aparece em mais de uma tabela da família, adota-se o maior
+// diâmetro (lado conservador para cálculo de ocupação).
+var PRYSMIAN = [
+ {ten:"450/750 V", iso:"PVC", cob:"", nome:"Genlis-F", des:"H07V-K", tipo:"flexível",
+  cabos:[["1x1,5",2.9],["1x2,5",3.5],["1x4",4.1],["1x6",4.6],["1x10",6],["1x16",7],["1x25",8.6],["1x35",9.7],["1x50",11.5],["1x70",13.4],["1x95",15.4],["1x120",17.2],["1x150",19],["1x185",20.9],["1x240",24.2]]},
+ {ten:"450/750 V", iso:"PVC", cob:"", nome:"Genlis-R", des:"H07V-U / H07V-R", tipo:"rígido",
+  cabos:[["1x1,5",2.9],["1x2,5",3.4],["1x4",3.9],["1x6",4.5],["1x10",5.8],["1x16",6.6],["1x25",8.2],["1x35",9.1],["1x50",10.7],["1x70",12.3],["1x95",14.3],["1x120",15.8],["1x150",17.5],["1x185",19.5],["1x240",22.6]]},
+ {ten:"450/750 V", iso:"LSZH", cob:"", nome:"Exzhellent Class 750 V", des:"H07Z1-K", tipo:"flexível",
+  cabos:[["1x1,5",2.9],["1x2,5",3.5],["1x4",4.1],["1x6",4.6],["1x10",6],["1x16",7],["1x25",8.6],["1x35",9.7],["1x50",11.5],["1x70",13.4],["1x95",15.4],["1x120",17.2],["1x150",19],["1x185",20.9],["1x240",24]]},
+ {ten:"0,6/1 kV", iso:"XLPE", cob:"PVC", nome:"Energy Class EXVB", des:"EXVB", tipo:"armado",
+  cabos:[["1x16",10.3],["1x25",12.1],["1x35",13],["1x50",14.6],["1x70",16.3],["1x95",18.2],["1x120",19.9],["1x150",21.8],["1x185",23.8],["1x240",26.9],["2x1,5",11.7],["2x2,5",12.4],["2x4",13.4],["2x6",14.4],["2x10",16],["2x16",18.2],["3x1,5",12.1],["3x2,5",12.9],["3x4",14],["3x6",15],["3x10",16.7],["3x16",19.3],["3x25",23],["3x35",25.4],["3x50",28.4],["4x1,5",12.9],["4x2,5",13.8],["4x4",14.9],["4x6",18.2],["4x10",20.9],["4x16",25.2],["4x35",27.6],["4x50",31.2],["5x1,5",13.7],["5x2,5",14.7],["5x4",15.9],["5x6",17.3],["5x10",19.6],["5x16",22.9],["5x25",27.4],["5x35",30]]},
+ {ten:"0,6/1 kV", iso:"XLPE", cob:"PVC", nome:"Energy Class RV", des:"RV / XV", tipo:"rígido",
+  cabos:[["1x1,5",4.9],["1x2,5",5.3],["1x4",5.7],["1x6",7.1],["1x10",7.3],["1x16",8.2],["1x25",9.7],["1x35",10.7],["1x50",12],["1x70",13.8],["1x95",15.9],["1x120",17.5],["1x150",19.4],["1x185",21.5],["1x240",24.1],["1x300",26.8],["1x400",30.1],["1x500",33.8],["1x630",39.3],["2x1,5",8.5],["2x2,5",9],["2x4",10],["2x6",11.3],["2x10",13],["2x16",15.3],["2x25",18.2],["2x35",20.1],["2x50",23.1],["2x70",26.7],["2x95",30.8],["2x120",34.2],["2x150",38.1],["2x185",42.4],["2x240",47.5],["2x300",52.8],["2x400",59.6],["3G1,5",9],["3G2,5",9.8],["3G4",10.5],["3G6",12.4],["3x6/4",13.1],["3G10",14.5],["3x10/6",15.1],["3G16",16.3],["3x16/10",17.7],["3x25",19.4],["3x25/16",21.4],["3x35",21.6],["3x35/16",23.6],["3x50",24.7],["3x50/25",27],["3x70",28.7],["3x70/35",31.4],["3x95",33],["3x95/50",36.2],["3x120",36.6],["3x120/70",40.7],["3x150",40.9],["3x150/70",44.8],["3x185",45.6],["3x185/95",50.1],["3x240",51.1],["3x240/120",56],["3x300",56.9],["3x300/150",62.4],["3x400/185",70.4],["4x1,5",9.5],["4x2,5",10.6],["4x4",11.6],["4x6",14],["4x10",15.3],["4x16",17.5],["4x25",21.6],["4x35",23.9],["4x50",27.4],["4x70",31.9],["4x95",36.6],["4x120",41.2],["4x150",45.4],["4x185",50.8],["4x240",57],["4x300",63.5],["4x400",71.6],["5G1,5",10.3],["5G2,5",11.5],["5G4",12.6],["5G6",14.5],["5G10",17],["5G16",19.8],["5G25",23.8],["5G35",26.4],["5G50",30.5],["5G70",35.6],["5G95",41.3],["5G120",45.9],["5G150",50.8],["5G185",56.7],["5G240",63.7],["5G300",70.9]]},
+ {ten:"0,6/1 kV", iso:"XLPE", cob:"PVC", nome:"Energy Class", des:"RV-K / FXV", tipo:"flexível",
+  cabos:[["1x1,5",5.7],["1x2,5",6.1],["1x4",6.7],["1x6",7.2],["1x10",8.2],["1x16",9.2],["1x25",10.8],["1x35",11.9],["1x50",13.5],["1x70",15.6],["1x95",17.4],["1x120",19.4],["1x150",21.4],["1x185",23.3],["1x240",26.6],["1x300",30.2],["1x400",34.8],["1x500",39.1],["1x630",43.7],["2x1,5",8.6],["2x2,5",9.4],["2x4",10.5],["2x6",11.6],["2x10",13.5],["2x16",15.5],["2x25",18.8],["2x35",21.2],["2x50",21.3],["2x70",24.7],["2x95",27.7],["2x120",31.3],["2x150",34.5],["2x185",37.8],["2x240",43.3],["3G1,5",9],["3G2,5",9.9],["3G4",11.1],["3G6",12.3],["3G10",14.3],["3G16",16.5],["3x25",20],["3x35",22.7],["3x50",24.9],["3x70",29.2],["3x95",32.5],["3x120",36.7],["3x150",40.6],["3x185",44.3],["3x240",50.8],["3x300",57.9],["4G1,5",9.9],["4G2,5",10.9],["4G4",12.2],["4G6",13.5],["4G10",15.8],["4x16",18.3],["4x25",22.4],["4x35",25.1],["4x50",27.5],["4x70",32.3],["4x95",35.6],["4x120",40.5],["4x150",44.6],["4x185",49.2],["4x240",56.4],["4x300",64.2],["5G1,5",10.8],["5G2,5",11.9],["5G4",13.4],["5G6",14.9],["5G10",17.5],["5G16",20.2],["5G25",24.8],["5G35",27.8],["5G50",32.5],["5G70",39.4],["5G95",44.2],["5G120",50],["5G150",55.3]]},
+ {ten:"0,6/1 kV", iso:"XLPE", cob:"LSZH", nome:"Exzhellent Compact", des:"RZ1-K (AS) / FXZ1", tipo:"flexível",
+  cabos:[["1x1,5",6.6],["1x2,5",7],["1x4",8],["1x6",8.5],["1x10",9.5],["1x16",10.1],["1x25",11.7],["1x35",12.8],["1x50",14.3],["1x70",16.4],["1x95",17.8],["1x120",19.8],["1x150",21.8],["1x185",23.7],["1x240",25.7],["1x300",29.5],["2x1,5",8.9],["2x2,5",9.8],["2x4",10.8],["2x6",11.7],["2x10",13.6],["2x16",15.6],["2x25",18.7],["2x35",21.2],["2x50",25],["3G1,5",9.4],["3G2,5",10.3],["3G4",11.4],["3G6",12.4],["3G10",14.5],["3G16",16.6],["3x25",20],["3x25/16",22.2],["3x35",22.6],["3x35/16",24.7],["3x50",26.7],["3x50/25",29.4],["3x70",31.4],["3x70/35",34.6],["3x95",35],["3x95/50",38.5],["3x120",39.6],["3x120/70",44],["3x150",43.9],["3x150/70",48.3],["3x185",48.2],["3x185/95",53],["3x240",54.9],["3x240/120",60.4],["3x300",63.1],["3x300/150",69.4],["4G1,5",10.3],["4G2,5",11.3],["4G4",12.6],["4G6",13.7],["4G10",16],["4G16",18.4],["4x25",22.3],["4x35",25],["4x50",29.7],["4x70",35],["4x95",38.9],["4x120",44.3],["4x150",48.8],["4x185",53.8],["4x240",61.3],["4x300",70.4],["5G1,5",12],["5G2,5",12.3],["5G4",13.8],["5G6",15],["5G10",17.6],["5G16",20.4],["5G25",24.7],["5G35",27.7],["5G50",33.1],["6x1,5",12.5],["6x2,5",13.8],["6x4",15.4],["6x6",17],["7x1,5",12.4],["7x2,5",13.7],["7x4",15.3],["7x6",16.9],["10x1,5",15.3],["10x2,5",17],["12x1,5",15.8],["12x2,5",17.5],["12x4",19.7],["14x1,5",16.5],["14x2,5",18.4],["14x4",20.7],["16x1,5",17.4],["16x2,5",19.4],["19x1,5",18.3],["19x2,5",20.4],["19x4",23.1],["19x6",25.8],["27x1,5",21.6],["27x2,5",24.2],["27x4",27.4],["30x1,5",22.3],["30x2,5",25],["37x1,5",24],["37x2,5",26.9],["44x1,5",27],["52x1,5",28.1],["61x1,5",30]]},
+ {ten:"0,6/1 kV", iso:"XLPE", cob:"PVC", nome:"Energy Class XVB", des:"XVB", tipo:"rígido",
+  cabos:[["1x16",9.1],["1x25",10.7],["1x35",11.6],["1x50",13],["1x70",14.8],["1x95",16.6],["1x120",18.3],["1x150",20.3],["1x185",22.3],["1x240",25.4],["1x300",28],["2x1,5",10],["2x2,5",10.7],["2x4",11.7],["2x6",12.7],["2x10",14.2],["2x16",16.5],["3x1,5",10.4],["3x2,5",11.2],["3x4",12.2],["3x6",13.3],["3x10",15],["3x16",17.7],["3x25",20.8],["3x35",23.4],["3x50",26.6],["4x1,5",11.2],["4x2,5",12.1],["4x4",13.2],["4x6",14.4],["4x10",16.5],["4x16",19.3],["4x25",23],["4x35",25.8],["4x50",29.4],["5x1,5",12],["5x2,5",13],["5x4",14.2],["5x6",15.6],["5x10",17.9],["5x16",21.2],["5x25",25.1]]},
+ {ten:"12/20 kV", iso:"HEPR", cob:"LSZH", nome:"Al Eprotenax H Compact", des:"AL HEPRZ1", tipo:"MT alumínio",
+  cabos:[["1X50/16",26.2],["1X95/16",29],["1X150/16",41.1],["1X240/16",41.2],["1X400/16",46.4],["1X500/16",44.5],["1X630/16",54.4]]},
+ {ten:"12/20 kV", iso:"XLPE", cob:"PE", nome:"Al Voltalene H", des:"AL RHZ1-2OL", tipo:"MT alumínio",
+  cabos:[["1X95(Al)/16",32.1],["1X150(Al)/16",35.2],["1X240(Al)/16",39.3],["1X240/16",44.3],["1X400(Al)/16",44.6],["1X400/16",49.6],["1X630(Cu)/16",52.2],["1X630(Al)/16",52.8]]},
+ {ten:"12/20 kV", iso:"XLPE", cob:"PE", nome:"Al Voltalene H", des:"AL RHZ1-OL", tipo:"MT alumínio",
+  cabos:[["1X95(Al)/16",32.1],["1X150(Al)/16",35.2],["1X240(Al)/16",44.3],["1X400(Al)/16",44.6],["1X500(Cu)/16",48.7],["1X630(Cu)/16",52.2]]},
+ {ten:"18/30 kV", iso:"HEPR", cob:"LSZH", nome:"Al Eprotenax H Compact", des:"AL HEPRZ1", tipo:"MT alumínio",
+  cabos:[["1X50/16",38.6],["1X95/16",39.9],["1X150/25",41.5],["1X240/25",45.6],["1X400/25",50.7],["1X500/16",49.4],["1X630/16",54.1],["1X630/25",58.8]]},
+ {ten:"18/30 kV", iso:"XLPE", cob:"PE", nome:"Al Voltalene H", des:"AL RHZ1-2OL", tipo:"MT alumínio",
+  cabos:[["1X500(Al)/16",53.8],["1X630(Al)/16",57.8]]},
+ {ten:"18/30 kV", iso:"XLPE", cob:"PE", nome:"Al Voltalene H", des:"AL RHZ1-OL", tipo:"MT alumínio",
+  cabos:[["1X95(Al)/16",37.1],["1X150(Al)/16",40.2],["1X240(Al)/16",49.3],["1X400(Al)/16",49.6],["1X500(Al)/16",53.1],["1X500(Cu)/16",53.7],["1X630(Al)/16",57.6],["1X630(Cu)/16",57.2]]}
+];
+
+// Eletrodutos — diâmetro de referência, ABNT NBR 16415:2015 Tabela B.1
+var ELETRODUTOS = [
+  {nome:'3/8"',     d:9.5},
+  {nome:'1/2"',     d:12.7},
+  {nome:'3/4"',     d:19.0},
+  {nome:'1"',       d:25.4},
+  {nome:'1.1/4"',   d:31.7},
+  {nome:'1.1/2"',   d:38.1},
+  {nome:'2"',       d:50.8},
+  {nome:'2.1/2"',   d:63.5},
+  {nome:'3"',       d:76.2},
+  {nome:'4"',       d:101.6},
+  {nome:'5"',       d:127.0},
+  {nome:'6"',       d:152.4}
+];
+
+// Eletrocalhas — dimensões da ABNT NBR 16415:2015 Tabela B.2
+var ELETROCALHAS = [
+  [50,50],[75,50],[75,75],[100,50],[100,75],[100,100],
+  [150,50],[150,75],[150,100],[200,50],[200,75],[200,100],
+  [300,50],[300,75],[300,100],[400,100],[500,100],[600,100]
+];
+
+// Perfilados — dimensões comerciais correntes
+var PERFILADOS = [[19,38],[38,38],[38,76]];
+
+/* ============================================================
+   REGRAS DE OCUPAÇÃO
+   ============================================================ */
+
+// NBR 5410 6.2.11.1.6 a): limite conforme o número de condutores no eletroduto.
+function limite5410Eletroduto(n){
+  if(n <= 1) return {pct:53, txt:"53 % (um condutor)"};
+  if(n === 2) return {pct:31, txt:"31 % (dois condutores)"};
+  return {pct:40, txt:"40 % (três ou mais condutores)"};
+}
+
+function regra(norma, infra, nCabos){
+  if(norma === "dados"){
+    // NBR 16415: dimensionar para 40 %; 60 % é o limite de "cheio".
+    return {
+      pct:40, teto:60,
+      texto:"40 %",
+      base:"ABNT NBR 16415:2015 — Anexo B: taxa de ocupação de 40 %, considerado cheio ao atingir 60 %.",
+      firme:true
+    };
+  }
+  if(infra === "eletroduto"){
+    var L = limite5410Eletroduto(nCabos);
+    return {
+      pct:L.pct, teto:null,
+      texto:L.txt,
+      base:"ABNT NBR 5410:2004 — 6.2.11.1.6 a): 53 % para um condutor, 31 % para dois, 40 % para três ou mais.",
+      firme:true
+    };
+  }
+  // Eletrocalhas e perfilados: a NBR 5410 não fixa taxa; adota-se 40 % como boa prática.
+  return {
+    pct:40, teto:null,
+    texto:"40 %",
+    base:"A ABNT NBR 5410 não fixa taxa de ocupação para eletrocalhas e perfilados. Adota-se 40 % por analogia à ABNT NBR 16415 e à prática de projeto — critério de engenharia, não requisito normativo.",
+    firme:false
+  };
+}
+
+/* ============================================================
+   UI — linhas de cabo
+   ============================================================ */
+
+var cablesEl = document.getElementById("cables");
+var seq = 0;
+
+function normaAtual(){
+  return document.querySelector('input[name="norma"]:checked').value;
+}
+
+function unicos(arr){
+  var vistos = {}, out = [];
+  arr.forEach(function(v){ if(!vistos[v]){ vistos[v] = 1; out.push(v); } });
+  return out;
+}
+function preencher(sel, valores, rotulos){
+  sel.innerHTML = "";
+  valores.forEach(function(v, i){
+    var o = document.createElement("option");
+    o.value = v; o.textContent = rotulos ? rotulos[i] : v;
+    sel.appendChild(o);
+  });
+}
+function rotuloProduto(g){
+  return g.des + " · " + g.tipo + (g.cob ? " · capa " + g.cob : "");
+}
+
+/* Linha de cabo — cabeamento estruturado (NBR 16415) */
+function linhaDados(row){
+  row.classList.add("compacta");
+  row.innerHTML =
+    '<div><label>Tipo de cabo</label><select class="c-tipo"></select></div>' +
+    '<div><label>Ø externo (mm)</label><input type="number" class="c-diam" step="0.1" min="0.1"></div>' +
+    '<div><label>Quantidade</label><input type="number" class="c-qtd" min="1" step="1" value="1"></div>' +
+    '<button class="del" title="Remover">&times;</button>';
+
+  var sel = row.querySelector(".c-tipo"), diam = row.querySelector(".c-diam");
+  preencher(sel, CABOS_DADOS.map(function(c){ return c.id; }), CABOS_DADOS.map(function(c){ return c.nome; }));
+  function sync(){
+    var c = CABOS_DADOS.filter(function(x){ return x.id === sel.value; })[0];
+    if(c && c.d !== null) diam.value = c.d; else { diam.value = ""; diam.focus(); }
+  }
+  sel.addEventListener("change", sync);
+  sync();
+  row.leitura = function(){
+    return {nome: sel.selectedOptions[0].textContent, d: parseFloat(diam.value)};
+  };
+}
+
+/* Linha de cabo — energia, catálogo Prysmian em cascata */
+function linhaEnergia(row){
+  row.innerHTML =
+    '<div class="cr-l1">' +
+      '<div><label>Classe de tensão</label><select class="c-ten"></select></div>' +
+      '<div><label>Isolação</label><select class="c-iso"></select></div>' +
+      '<div><label>Construção</label><select class="c-prod"></select></div>' +
+    '</div>' +
+    '<div class="cr-l2">' +
+      '<div><label>Seção / formação</label><select class="c-sec"></select></div>' +
+      '<div><label>Ø externo (mm)</label><input type="number" class="c-diam" step="0.1" min="0.1"></div>' +
+      '<div><label>Quantidade</label><input type="number" class="c-qtd" min="1" step="1" value="1"></div>' +
+      '<button class="del" title="Remover">&times;</button>' +
+    '</div>' +
+    '<div class="fonte"></div>';
+
+  var ten  = row.querySelector(".c-ten"),  iso  = row.querySelector(".c-iso");
+  var prod = row.querySelector(".c-prod"), sec  = row.querySelector(".c-sec");
+  var diam = row.querySelector(".c-diam"), fonte = row.querySelector(".fonte");
+
+  function grupos(){
+    return PRYSMIAN.filter(function(g){ return g.ten === ten.value && g.iso === iso.value; });
+  }
+  function grupoAtual(){ return grupos()[parseInt(prod.value, 10)] || null; }
+
+  function syncTen(){
+    var isos = unicos(PRYSMIAN.filter(function(g){ return g.ten === ten.value; })
+                              .map(function(g){ return g.iso; }));
+    preencher(iso, isos);
+    syncIso();
+  }
+  function syncIso(){
+    var gs = grupos();
+    preencher(prod, gs.map(function(_, i){ return i; }), gs.map(rotuloProduto));
+    syncProd();
+  }
+  function syncProd(){
+    var g = grupoAtual();
+    if(!g){ preencher(sec, []); diam.value = ""; fonte.textContent = ""; return; }
+    preencher(sec, g.cabos.map(function(c){ return c[0]; }));
+    syncSec();
+  }
+  function syncSec(){
+    var g = grupoAtual();
+    if(!g) return;
+    var c = g.cabos.filter(function(c){ return c[0] === sec.value; })[0];
+    if(c) diam.value = c[1];
+    fonte.textContent = "Prysmian " + g.nome + " — " + g.des + " · " + g.ten +
+                        " · isolação " + g.iso + (g.cob ? " · capa " + g.cob : "");
+  }
+
+  preencher(ten, unicos(PRYSMIAN.map(function(g){ return g.ten; })));
+  ten.addEventListener("change", syncTen);
+  iso.addEventListener("change", syncIso);
+  prod.addEventListener("change", syncProd);
+  sec.addEventListener("change", syncSec);
+  syncTen();
+
+  row.leitura = function(){
+    var g = grupoAtual();
+    return {
+      nome: (g ? g.des : "cabo") + " " + sec.value,
+      d: parseFloat(diam.value)
+    };
+  };
+}
+
+function addCableRow(){
+  var row = document.createElement("div");
+  row.className = "cable-row";
+  row.dataset.id = ++seq;
+  if(normaAtual() === "dados") linhaDados(row); else linhaEnergia(row);
+  row.querySelector(".del").addEventListener("click", function(){
+    if(cablesEl.children.length > 1) row.remove();
+  });
+  cablesEl.appendChild(row);
+}
+
+document.getElementById("addCable").addEventListener("click", function(){ addCableRow(); });
+
+// Trocar a norma troca o catálogo de cabos — recomeça com uma linha limpa.
+document.getElementById("segNorma").addEventListener("change", function(){
+  cablesEl.innerHTML = "";
+  addCableRow();
+  renderResult(null);
+});
+
+/* ============================================================
+   UI — infraestrutura
+   ============================================================ */
+
+var infraType = document.getElementById("infraType");
+var infraSize = document.getElementById("infraSize");
+var dimA = document.getElementById("dimA");
+var dimB = document.getElementById("dimB");
+var dimBWrap = document.getElementById("dimBWrap");
+var dimALabel = document.getElementById("dimALabel");
+var dimAHint = document.getElementById("dimAHint");
+var sizeLabel = document.getElementById("sizeLabel");
+
+function listaInfra(tipo){
+  if(tipo === "eletroduto") return ELETRODUTOS.map(function(e){return {nome:e.nome, a:e.d, b:null};});
+  var src = tipo === "eletrocalha" ? ELETROCALHAS : PERFILADOS;
+  return src.map(function(p){return {nome:p[0]+" × "+p[1]+" mm", a:p[0], b:p[1]};});
+}
+
+function popularInfra(){
+  var tipo = infraType.value;
+  var lista = listaInfra(tipo);
+  infraSize.innerHTML = "";
+  lista.forEach(function(it, i){
+    var o = document.createElement("option");
+    o.value = i; o.textContent = it.nome;
+    infraSize.appendChild(o);
+  });
+
+  if(tipo === "eletroduto"){
+    sizeLabel.textContent = "Diâmetro nominal planejado";
+    dimALabel.textContent = "Diâmetro interno (mm)";
+    dimAHint.textContent = "Referência da NBR 16415 Tabela B.1 — edite com o valor real do catálogo.";
+    dimBWrap.style.display = "none";
+    infraSize.selectedIndex = 3; // 1"
+  } else {
+    sizeLabel.textContent = "Dimensões planejadas";
+    dimALabel.textContent = "Largura interna (mm)";
+    dimAHint.textContent = "Editável — use o valor real do catálogo se necessário.";
+    dimBWrap.style.display = "block";
+    infraSize.selectedIndex = tipo === "eletrocalha" ? 2 : 1;
+  }
+  syncDims();
+}
+
+function syncDims(){
+  var it = listaInfra(infraType.value)[parseInt(infraSize.value,10)];
+  if(!it) return;
+  dimA.value = it.a;
+  if(it.b !== null) dimB.value = it.b;
+}
+
+infraType.addEventListener("change", function(){ popularInfra(); renderResult(null); });
+infraSize.addEventListener("change", function(){ syncDims(); renderResult(null); });
+
+/* ============================================================
+   CÁLCULO
+   ============================================================ */
+
+var PI4 = Math.PI / 4;
+
+function areaUtil(tipo, a, b){
+  return tipo === "eletroduto" ? PI4 * a * a : a * b;
+}
+
+function lerCabos(){
+  var out = [], erro = null;
+  Array.prototype.forEach.call(cablesEl.children, function(row){
+    var lido = row.leitura();
+    var nome = lido.nome;
+    var d = lido.d;
+    var q = parseInt(row.querySelector(".c-qtd").value, 10);
+    if(!(d > 0)){ erro = "Informe o diâmetro externo de todos os cabos."; return; }
+    if(!(q > 0)){ erro = "A quantidade de cabos deve ser no mínimo 1."; return; }
+    out.push({nome:nome, d:d, q:q, area:PI4*d*d*q});
+  });
+  return {cabos:out, erro:erro};
+}
+
+function avaliar(){
+  var lidos = lerCabos();
+  if(lidos.erro) return {erro:lidos.erro};
+
+  var cabos = lidos.cabos;
+  var nTotal = cabos.reduce(function(s,c){return s+c.q;},0);
+  var areaCabos = cabos.reduce(function(s,c){return s+c.area;},0);
+
+  var tipo = infraType.value;
+  var a = parseFloat(dimA.value);
+  var b = tipo === "eletroduto" ? null : parseFloat(dimB.value);
+  if(!(a > 0) || (tipo !== "eletroduto" && !(b > 0)))
+    return {erro:"Informe as dimensões internas da infraestrutura."};
+
+  // Cabo isolado não pode ser maior que a menor dimensão interna disponível.
+  var maiorCabo = Math.max.apply(null, cabos.map(function(c){return c.d;}));
+  var vaoMinimo = tipo === "eletroduto" ? a : Math.min(a, b);
+
+  var r = regra(normaAtual(), tipo, nTotal);
+  var util = areaUtil(tipo, a, b);
+  var taxa = areaCabos / util * 100;
+
+  return {
+    cabos:cabos, nTotal:nTotal, areaCabos:areaCabos,
+    tipo:tipo, a:a, b:b, util:util, taxa:taxa, regra:r,
+    maiorCabo:maiorCabo, vaoMinimo:vaoMinimo,
+    cabeFisicamente: maiorCabo <= vaoMinimo,
+    aprovado: taxa <= r.pct && maiorCabo <= vaoMinimo,
+    nomeInfra: infraSize.selectedOptions[0].textContent
+  };
+}
+
+// Menor bitola da mesma família que atende ao limite.
+function sugerir(res){
+  var lista = listaInfra(res.tipo);
+  for(var i = 0; i < lista.length; i++){
+    var it = lista[i];
+    var u = areaUtil(res.tipo, it.a, it.b);
+    var vao = res.tipo === "eletroduto" ? it.a : Math.min(it.a, it.b);
+    if(res.areaCabos / u * 100 <= res.regra.pct && res.maiorCabo <= vao){
+      return {nome:it.nome, taxa:res.areaCabos / u * 100};
+    }
+  }
+  return null;
+}
+
+// Quantos cabos ainda cabem, mantidas as proporções do conjunto informado.
+function folga(res){
+  var disp = res.util * res.regra.pct / 100 - res.areaCabos;
+  if(disp <= 0) return 0;
+  var areaMedia = res.areaCabos / res.nTotal;
+  return Math.floor(disp / areaMedia);
+}
+
+/* ============================================================
+   VISTA DE CORTE — empacotamento dos cabos na seção
+   ------------------------------------------------------------
+   Arranjo ilustrativo: os cabos são acomodados por "gravidade"
+   — para o centro no eletroduto, para o fundo na eletrocalha e
+   no perfilado. O veredito de aprovação continua vindo do
+   cálculo de áreas exigido pelas normas, não deste desenho.
+   ============================================================ */
+
+var PALETA = ["#DA344D","#2B3860","#6E1A33","#4A78A8","#8A2143","#C9748A","#3E8E7E"];
+var EPS = 1e-7;
+
+// Expande os grupos em círculos individuais, do maior para o menor.
+function listaCirculos(cabos){
+  var cs = [];
+  cabos.forEach(function(c, gi){
+    for(var i = 0; i < c.q; i++) cs.push({r:c.d/2, g:gi});
+  });
+  cs.sort(function(a,b){ return b.r - a.r; });
+  return cs;
+}
+
+/* ---------- Eletroduto: acomodação radial em direção ao centro ---------- */
+function packCirculo(circulos, R){
+  var postos = [], sobra = 0;
+  var NB = 240; // direções testadas
+
+  circulos.forEach(function(c){
+    var lim = R - c.r;
+    if(lim < 0){ sobra++; return; }
+
+    // Só interessam os já postos cujo alcance angular cobre a direção testada.
+    var buckets = new Array(NB);
+    for(var i = 0; i < NB; i++) buckets[i] = [];
+    postos.forEach(function(p, idx){
+      var s = c.r + p.r;
+      var dc = Math.hypot(p.x, p.y);
+      var meia;
+      if(dc <= s) meia = Math.PI;                 // envolve o centro: bloqueia tudo
+      else meia = Math.asin(Math.min(1, s / dc)) + 1e-3;
+      var th = Math.atan2(p.y, p.x);
+      var b0 = Math.floor((th - meia) / (2*Math.PI) * NB);
+      var b1 = Math.ceil ((th + meia) / (2*Math.PI) * NB);
+      for(var b = b0; b <= b1; b++) buckets[((b % NB) + NB) % NB].push(idx);
+    });
+
+    var melhorD = Infinity, melhorX = 0, melhorY = 0;
+    for(var b = 0; b < NB; b++){
+      var th = b / NB * 2 * Math.PI;
+      var ct = Math.cos(th), st = Math.sin(th);
+      var lista = buckets[b];
+      var d = 0, guard = 0, ok;
+      do{
+        ok = true;
+        for(var k = 0; k < lista.length; k++){
+          var p = postos[lista[k]];
+          var s = c.r + p.r;
+          // |P(d) - p|² = d² - 2·d·(p·û) + |p|² = s²  →  raiz externa
+          var bb = p.x*ct + p.y*st;
+          var cc = p.x*p.x + p.y*p.y - s*s;
+          var disc = bb*bb - cc;
+          if(disc <= 0) continue;                 // a direção passa longe deste
+          var raiz = bb + Math.sqrt(disc);
+          if(d < raiz - EPS && raiz > 0){ d = raiz; ok = false; }
+        }
+      } while(!ok && ++guard < 300 && d <= lim);
+
+      if(ok && d <= lim && d < melhorD){
+        melhorD = d; melhorX = d*ct; melhorY = d*st;
+      }
+    }
+
+    if(melhorD === Infinity) sobra++;
+    else postos.push({x:melhorX, y:melhorY, r:c.r, g:c.g});
+  });
+
+  return {postos:postos, sobra:sobra};
+}
+
+/* ---------- Eletrocalha / perfilado: acomodação para o fundo ---------- */
+function packRetangulo(circulos, L, H){
+  var postos = [], sobra = 0;
+  var colW = Math.max(circulos[0].r * 2, 1);      // largura de coluna = maior cabo
+  var cols = {};                                   // índice espacial por faixa de x
+
+  function vizinhos(x, alcance){
+    var c0 = Math.floor((x - alcance) / colW), c1 = Math.floor((x + alcance) / colW);
+    var out = [];
+    for(var c = c0; c <= c1; c++) if(cols[c]) out = out.concat(cols[c]);
+    return out;
+  }
+
+  circulos.forEach(function(c){
+    var r = c.r;
+    if(2*r > L + EPS || 2*r > H + EPS){ sobra++; return; }
+
+    var NB = 220, passo = (L - 2*r) / (NB - 1);
+    var melhorY = Infinity, melhorX = 0;
+
+    for(var i = 0; i < NB; i++){
+      var x = r + (passo > 0 ? i * passo : 0);
+      var viz = vizinhos(x, r + colW);
+      var y = r, guard = 0, mudou;
+      do{
+        mudou = false;
+        for(var k = 0; k < viz.length; k++){
+          var p = viz[k];
+          var s = r + p.r, dx = x - p.x;
+          if(Math.abs(dx) < s - EPS){
+            var yy = p.y + Math.sqrt(s*s - dx*dx);
+            if(yy > y + EPS){ y = yy; mudou = true; }
+          }
+        }
+      } while(mudou && ++guard < 300 && y + r <= H);
+
+      if(y + r <= H + EPS && y < melhorY - EPS){ melhorY = y; melhorX = x; }
+      if(passo <= 0) break;
+    }
+
+    if(melhorY === Infinity){ sobra++; return; }
+    var novo = {x:melhorX, y:melhorY, r:r, g:c.g};
+    postos.push(novo);
+    var ci = Math.floor(melhorX / colW);
+    (cols[ci] = cols[ci] || []).push(novo);
+  });
+
+  return {postos:postos, sobra:sobra};
+}
+
+/* ---------- Desenho ---------- */
+function desenharCorte(res){
+  var circulos = listaCirculos(res.cabos);
+  var W = 460, pad = 26, out, vb, forma;
+
+  if(res.tipo === "eletroduto"){
+    var R = res.a / 2;
+    out = packCirculo(circulos, R);
+    var esp = Math.max(R * 0.06, 1.2);            // parede desenhada
+    var meio = R + esp + pad;
+    vb = [0, 0, meio*2, meio*2];
+    forma =
+      '<circle cx="'+meio+'" cy="'+meio+'" r="'+(R+esp/2)+'" fill="#fff" stroke="#8A94AC" stroke-width="'+esp+'"/>' +
+      '<circle cx="'+meio+'" cy="'+meio+'" r="'+R+'" fill="none" stroke="#C7CEDC" stroke-width="0.5"/>';
+    var cx = meio, cy = meio;
+    var pts = out.postos.map(function(p){
+      return {x:cx + p.x, y:cy + p.y, r:p.r, g:p.g};
+    });
+    return montarSVG(vb, forma, pts, out.sobra, W,
+      Math.round(res.a*10)/10 + " mm (Ø interno)");
+  }
+
+  var L = res.a, H = res.b;
+  out = packRetangulo(circulos, L, H);
+  var espR = Math.max(Math.min(L,H) * 0.04, 1.2);
+  var ox = espR + pad, oy = espR + pad;
+  vb = [0, 0, L + 2*ox, H + 2*oy];
+  forma =
+    '<rect x="'+(ox-espR/2)+'" y="'+(oy-espR/2)+'" width="'+(L+espR)+'" height="'+(H+espR)+'" ' +
+      'fill="#fff" stroke="#8A94AC" stroke-width="'+espR+'"/>' +
+    '<rect x="'+ox+'" y="'+oy+'" width="'+L+'" height="'+H+'" fill="none" stroke="#C7CEDC" stroke-width="0.5"/>';
+  // y do empacotamento cresce para cima; o SVG cresce para baixo — inverte.
+  var pts = out.postos.map(function(p){
+    return {x:ox + p.x, y:oy + (H - p.y), r:p.r, g:p.g};
+  });
+  return montarSVG(vb, forma, pts, out.sobra, W,
+    Math.round(L) + " × " + Math.round(H) + " mm (internas)");
+}
+
+function montarSVG(vb, forma, pts, sobra, larguraAlvo, rotulo){
+  var esc = larguraAlvo / vb[2];
+  var alt = vb[3] * esc;
+  var corpo = pts.map(function(p){
+    var cor = PALETA[p.g % PALETA.length];
+    return '<circle cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="'+p.r.toFixed(2)+'" ' +
+           'fill="'+cor+'" fill-opacity="0.88" stroke="'+cor+'" stroke-width="'+(p.r*0.14).toFixed(2)+'"/>';
+  }).join("");
+  var svg = '<svg viewBox="'+vb.join(" ")+'" width="'+Math.round(larguraAlvo)+'" height="'+Math.round(alt)+'" ' +
+            'role="img" aria-label="Vista de corte da ocupação">' + forma + corpo + '</svg>';
+  return {svg:svg, sobra:sobra, rotulo:rotulo};
+}
+
+/* ============================================================
+   RENDERIZAÇÃO
+   ============================================================ */
+
+var out = document.getElementById("out");
+var fmt = function(v, c){ return v.toLocaleString("pt-BR", {minimumFractionDigits:c, maximumFractionDigits:c}); };
+
+function renderResult(res){
+  if(res === null){
+    out.innerHTML = '<div class="placeholder">Informe os cabos e a infraestrutura planejada,<br>depois clique em <b>Avaliar infraestrutura</b>.</div>';
+    return;
+  }
+  if(res.erro){
+    out.innerHTML = '<div class="err">' + res.erro + '</div>';
+    return;
+  }
+
+  var r = res.regra;
+  var classe, tag, titulo, msg;
+
+  if(!res.cabeFisicamente){
+    classe = "bad"; tag = "Não atende";
+    titulo = "Cabo maior que a infraestrutura";
+    msg = "O cabo de maior diâmetro (" + fmt(res.maiorCabo,1) + " mm) não passa pela menor dimensão interna disponível (" + fmt(res.vaoMinimo,1) + " mm).";
+  } else if(res.aprovado){
+    classe = "ok"; tag = "Atende";
+    titulo = fmt(res.taxa,1) + " % de ocupação";
+    msg = "A infraestrutura planejada (" + res.nomeInfra + ") comporta os " + res.nTotal + " cabos dentro do limite de " + r.texto + ".";
+  } else {
+    classe = "bad"; tag = "Não atende";
+    titulo = fmt(res.taxa,1) + " % de ocupação";
+    msg = "A ocupação excede o limite de " + r.texto + ". É necessário aumentar as dimensões ou dividir os cabos em mais de um caminho.";
+  }
+
+  // Faixa de atenção da NBR 16415: acima de 40 % e até 60 %.
+  if(classe === "ok" && r.teto && res.taxa > r.pct){
+    classe = "warn"; tag = "Atende com ressalva";
+  }
+  if(classe === "bad" && r.teto && res.taxa <= r.teto && res.cabeFisicamente){
+    classe = "warn"; tag = "Atende com ressalva";
+    msg = "A ocupação de " + fmt(res.taxa,1) + " % ultrapassa os 40 % de projeto, mas ainda está abaixo dos 60 % em que a NBR 16415 considera o caminho cheio. Não sobra capacidade de expansão.";
+  }
+
+  var corte = desenharCorte(res);
+  var legenda = res.cabos.map(function(c, i){
+    return '<span><i style="background:' + PALETA[i % PALETA.length] + '"></i>' +
+           c.nome + ' · Ø ' + fmt(c.d,1) + ' mm · ' + c.q + '×</span>';
+  }).join("");
+
+  var linhas = res.cabos.map(function(c){
+    return "<tr><td>" + c.nome + "</td><td class='n'>" + fmt(c.d,1) + "</td><td class='n'>" + c.q +
+           "</td><td class='n'>" + fmt(c.area,1) + "</td></tr>";
+  }).join("");
+
+  var sug = "";
+  if(!res.aprovado && res.cabeFisicamente){
+    var s = sugerir(res);
+    sug = s
+      ? '<div class="suggest">Menor ' + res.tipo + ' que atende: <strong>' + s.nome +
+        '</strong> — ocupação resultante de ' + fmt(s.taxa,1) + ' %.</div>'
+      : '<div class="suggest">Nenhuma bitola da tabela atende a esse volume de cabos. <strong>Divida os cabos em mais de um caminho.</strong></div>';
+  } else if(res.aprovado){
+    var f = folga(res);
+    sug = f === 0
+      ? '<div class="suggest">Sem folga: <strong>nenhum cabo adicional</strong> cabe sem ultrapassar o limite de ' + fmt(r.pct,0) + ' %.</div>'
+      : '<div class="suggest">Folga disponível: cabem mais <strong>' + f + ' cabo' + (f === 1 ? "" : "s") +
+        '</strong> do mesmo conjunto antes de atingir o limite de ' + fmt(r.pct,0) + ' %.</div>';
+  }
+
+  out.innerHTML =
+    '<div class="verdict ' + classe + '">' +
+      '<div class="tag">' + tag + '</div>' +
+      '<div class="big">' + titulo + '</div>' +
+      '<div class="msg">' + msg + '</div>' +
+    '</div>' +
+
+    '<div class="corte">' +
+      corte.svg +
+      '<div class="legend">' + legenda + '</div>' +
+      '<div class="corte-cap">Vista de corte — ' + res.nomeInfra + ', ' + corte.rotulo + '<br>' +
+        'Ocupação <b>' + fmt(res.taxa,1) + ' %</b> · limite <b>' + r.texto + '</b>' +
+        (corte.sobra > 0
+          ? '<br><span class="overflow-note">' + corte.sobra + ' cabo' + (corte.sobra === 1 ? "" : "s") +
+            ' não coube' + (corte.sobra === 1 ? "" : "ram") + ' na seção e não aparece' +
+            (corte.sobra === 1 ? "" : "m") + ' no desenho.</span>'
+          : '') +
+      '</div>' +
+    '</div>' +
+
+    '<table style="margin-top:18px">' +
+      '<thead><tr><th>Cabo</th><th class="n">Ø (mm)</th><th class="n">Qtd</th><th class="n">Área (mm²)</th></tr></thead>' +
+      '<tbody>' + linhas + '</tbody>' +
+      '<tfoot><tr><td>Total</td><td></td><td class="n">' + res.nTotal + '</td><td class="n">' + fmt(res.areaCabos,1) + '</td></tr></tfoot>' +
+    '</table>' +
+
+    '<table style="margin-top:14px">' +
+      '<tbody>' +
+        '<tr><td>Infraestrutura</td><td class="n">' + res.nomeInfra + '</td></tr>' +
+        '<tr><td>Área útil da seção</td><td class="n">' + fmt(res.util,1) + ' mm²</td></tr>' +
+        '<tr><td>Área ocupada pelos cabos</td><td class="n">' + fmt(res.areaCabos,1) + ' mm²</td></tr>' +
+        '<tr><td>Taxa de ocupação</td><td class="n"><b>' + fmt(res.taxa,1) + ' %</b></td></tr>' +
+        '<tr><td>Limite aplicável</td><td class="n">' + r.texto + '</td></tr>' +
+      '</tbody>' +
+    '</table>' +
+
+    sug +
+    '<div class="note"><b>Critério aplicado:</b> ' + r.base +
+    (r.firme ? "" : " Verifique se o cliente ou a especificação do projeto impõe outro valor.") +
+    (normaAtual() === "eletrica"
+      ? '<br><br><b>Diâmetros:</b> catálogo Prysmian <i>Cabos de Baixa e Média Tensão</i> — coluna "Diâmetro exterior aproximado". ' +
+        'É o portfólio europeu (designações EN/UNE: H07V-K, RV-K, RZ1-K, RHZ1). Confira contra o produto realmente especificado ' +
+        'antes de fechar o projeto; o campo Ø é editável.'
+      : '') +
+    '<br><br><b>Sobre o desenho:</b> o arranjo mostrado é ilustrativo — os cabos são acomodados por gravidade ' +
+    'para o centro (eletroduto) ou para o fundo (eletrocalha e perfilado). Na obra a disposição real varia com o ' +
+    'puxamento e o agrupamento. A aprovação acima vem do cálculo de áreas exigido pela norma, não da geometria do desenho.' +
+    '</div>';
+}
+
+document.getElementById("calc").addEventListener("click", function(){
+  renderResult(avaliar());
+});
+
+/* Inicialização */
+addCableRow();
+popularInfra();
+
+})();
+</script>
+</body>
+</html>

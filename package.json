@@ -1,0 +1,50 @@
+{
+  "name": "zeplin-ocupacao-cabos",
+  "version": "1.0.0",
+  "description": "Verificacao de ocupacao de eletrodutos, eletrocalhas e perfilados - ABNT NBR 5410 e ABNT NBR 16415",
+  "main": "main.js",
+  "author": "Marco Deouro Deritti",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "icone": "node scripts/make-icon.js",
+    "start": "electron .",
+    "dist": "npm run icone && electron-builder --win",
+    "dist:portatil": "npm run icone && electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.0.12",
+    "pngjs": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.zeplin.ocupacaocabos",
+    "productName": "Zeplin Ocupacao de Cabos",
+    "copyright": "Copyright (c) 2026 Marco Deouro Deritti",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "logo.png",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ocupacao de Cabos",
+      "artifactName": "Zeplin-Ocupacao-de-Cabos-Setup-${version}.${ext}"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# dependências (reinstaláveis com npm install)
+node_modules/
+
+# saída de build — o instalador tem 95 MB, não vai para o repositório
+dist/
+
+# ícone gerado a partir de logo.png por scripts/make-icon.js
+build/
+
+# ruído do sistema
+*.log
+npm-debug.log*
+Thumbs.db
+desktop.ini
+.DS_Store
