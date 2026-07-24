@@ -8,7 +8,7 @@ ocupação, diz se atende à norma, desenha a vista de corte e exporta em DXF pa
 
 O instalador está em `dist/`:
 
-    Zeplin-Ocupacao-de-Cabos-Setup-1.0.0.exe
+    Zeplin-Ocupacao-de-Cabos-Setup-1.1.0.exe
 
 Copie esse arquivo para a máquina de destino e execute. Ele instala por usuário
 (não pede senha de administrador), permite escolher a pasta e cria atalhos na
