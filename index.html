@@ -92,6 +92,16 @@
     font-size:11px;color:var(--muted);margin-top:9px;padding-top:8px;
     border-top:1px dashed var(--line);line-height:1.45;
   }
+  .wo-nota{color:var(--warn);border-top-color:#E7C97A}
+  .wo-nota b{color:var(--warn)}
+
+  .export{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .btn-exp{
+    background:#fff;color:var(--navy);border:1px solid var(--navy-3);
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .btn-exp:hover{background:var(--navy-2);color:#fff;border-color:var(--navy-2)}
+  .export-hint{font-size:11.5px;color:var(--muted);flex:1;min-width:180px}
   .cable-row .del{
     border:1px solid var(--line);background:#fff;color:var(--maroon);border-radius:6px;
     height:36px;cursor:pointer;font-size:17px;line-height:1;font-weight:700;
@@ -176,8 +186,9 @@
         <fieldset>
           <label>Natureza da instalação (define a norma aplicável)</label>
           <div class="seg" id="segNorma">
-            <label><input type="radio" name="norma" value="eletrica" checked><span>Elétrica — NBR 5410</span></label>
-            <label><input type="radio" name="norma" value="dados"><span>Cabeamento estruturado — NBR 16415</span></label>
+            <label><input type="radio" name="norma" value="eletrica" checked><span>Elétrica<br>NBR 5410</span></label>
+            <label><input type="radio" name="norma" value="dados"><span>Cabeamento estruturado<br>NBR 16415</span></label>
+            <label><input type="radio" name="norma" value="som"><span>Som / sinal<br>NBR 5410</span></label>
           </div>
         </fieldset>
       </div>
@@ -252,6 +263,30 @@ var CABOS_DADOS = [
   {id:"cat6au",  nome:"CAT 6A (U/UTP)",      d:8.6},
   {id:"cat7",    nome:"CAT 7",               d:9.3},
   {id:"custom",  nome:"Outro (informar Ø)",  d:null}
+];
+
+// Cabos de som, sinal, áudio e controle — linha WaveOne (Chiave Distribuidora).
+// IMPORTANTE: a WaveOne NÃO publica o diâmetro externo destes cabos — verificado
+// em jul/2026 no catálogo comercial, no catálogo profissional e no varejo. Os
+// valores de "d" abaixo são ESTIMATIVAS DE ENGENHARIA, obtidas da formação do
+// condutor mais parede típica de isolação/capa em PVC, e dos diâmetros padrão de
+// cabos coaxiais (RG-58 ~5 mm; RG-59 ~6 mm). NÃO são dado de catálogo e estão
+// marcados com est:true para o app sinalizar isso ao projetista. Devem ser
+// confirmados com paquímetro antes de fechar o projeto.
+var WAVEONE = [
+  {id:"wo-privilege",  grupo:"Caixa de som",         nome:"Privilege 2×2 mm²",           d:6.5, est:true},
+  {id:"wo-marine",     grupo:"Caixa de som",         nome:"Marine 2×2 mm² (litorâneo)",  d:6.5, est:true},
+  {id:"wo-rca",        grupo:"Áudio / sinal",        nome:"RCA 2×0,35",                  d:4.0, est:true},
+  {id:"wo-philipsbt",  grupo:"Áudio / sinal",        nome:"Philips BT 2×0,20",           d:4.0, est:true},
+  {id:"wo-philipssn",  grupo:"Áudio / sinal",        nome:"Philips BT Sn-Cr 2×0,20",     d:4.0, est:true},
+  {id:"wo-stereo",     grupo:"Áudio / sinal",        nome:"Stereo áudio 2×0,30",         d:4.0, est:true},
+  {id:"wo-stereomini", grupo:"Áudio / sinal",        nome:"Stereo áudio mini 2×0,13",    d:2.8, est:true},
+  {id:"wo-coaxsub",    grupo:"Coaxial áudio-vídeo",  nome:"Coaxial Subwoofer 50 Ω",      d:5.0, est:true},
+  {id:"wo-coaxvid",    grupo:"Coaxial áudio-vídeo",  nome:"Coaxial Vídeo 75 Ω",          d:6.0, est:true},
+  {id:"wo-manga",      grupo:"Controle / automação", nome:"Manga 4×22 AWG (blindado)",   d:5.5, est:true},
+  {id:"wo-knx",        grupo:"Controle / automação", nome:"Knx (automação KNX)",         d:6.8, est:true},
+  {id:"wo-autonet",    grupo:"Controle / automação", nome:"Autonet RS-485 (blindado)",   d:6.0, est:true},
+  {id:"wo-firealarm",  grupo:"Controle / automação", nome:"Fire Alarm 2×1,5 mm²",        d:6.0, est:true}
 ];
 
 // Cabos de energia — catálogo Prysmian "Cabos de Baixa e Média Tensão".
@@ -382,27 +417,72 @@ function rotuloProduto(g){
   return g.des + " · " + g.tipo + (g.cob ? " · capa " + g.cob : "");
 }
 
-/* Linha de cabo — cabeamento estruturado (NBR 16415) */
-function linhaDados(row){
-  row.classList.add("compacta");
+/* Linha de cabo baseada em catálogo, usada por duas abas:
+   - Cabeamento estruturado (NBR 16415): opts.cat = true — inclui os CAT no topo
+     e a linha WaveOne de som/sinal logo abaixo (aqui vale o critério de 40 %).
+   - Som / sinal (NBR 5410): opts.cat = false — só a linha WaveOne.
+   Os cabos WaveOne aparecem nas duas; o que muda é a taxa aplicada, definida
+   pela aba (função regra), não por esta linha. */
+function linhaCatalogo(row, opts){
   row.innerHTML =
-    '<div><label>Tipo de cabo</label><select class="c-tipo"></select></div>' +
-    '<div><label>Ø externo (mm)</label><input type="number" class="c-diam" step="0.1" min="0.1"></div>' +
-    '<div><label>Quantidade</label><input type="number" class="c-qtd" min="1" step="1" value="1"></div>' +
-    '<button class="del" title="Remover">&times;</button>';
+    '<div class="cr-l2">' +
+      '<div><label>' + (opts.cat ? "Tipo de cabo" : "Cabo") + '</label><select class="c-tipo"></select></div>' +
+      '<div><label>Ø externo (mm)</label><input type="number" class="c-diam" step="0.1" min="0.1"></div>' +
+      '<div><label>Quantidade</label><input type="number" class="c-qtd" min="1" step="1" value="1"></div>' +
+      '<button class="del" title="Remover">&times;</button>' +
+    '</div>' +
+    '<div class="fonte wo-nota" style="display:none"></div>';
 
   var sel = row.querySelector(".c-tipo"), diam = row.querySelector(".c-diam");
-  preencher(sel, CABOS_DADOS.map(function(c){ return c.id; }), CABOS_DADOS.map(function(c){ return c.nome; }));
+  var nota = row.querySelector(".wo-nota");
+
+  sel.innerHTML = "";
+  if(opts.cat){
+    var g1 = document.createElement("optgroup");
+    g1.label = "Cabeamento estruturado — NBR 16415";
+    CABOS_DADOS.forEach(function(c){
+      if(c.id === "custom") return;
+      var o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; g1.appendChild(o);
+    });
+    sel.appendChild(g1);
+  }
+  // Linha WaveOne de som/sinal, agrupada por aplicação.
+  unicos(WAVEONE.map(function(c){ return c.grupo; })).forEach(function(gr){
+    var og = document.createElement("optgroup");
+    og.label = (opts.cat ? "Som / sinal · " : "") + gr;
+    WAVEONE.filter(function(c){ return c.grupo === gr; }).forEach(function(c){
+      var o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  var oc = document.createElement("option"); oc.value = "custom"; oc.textContent = "Outro (informar Ø)";
+  sel.appendChild(oc);
+
+  function acha(id){ return CABOS_DADOS.concat(WAVEONE).filter(function(x){ return x.id === id; })[0]; }
+
   function sync(){
-    var c = CABOS_DADOS.filter(function(x){ return x.id === sel.value; })[0];
-    if(c && c.d !== null) diam.value = c.d; else { diam.value = ""; diam.focus(); }
+    var c = acha(sel.value);
+    if(c && c.d != null) diam.value = c.d; else { diam.value = ""; diam.focus(); }
+    if(c && c.est){
+      nota.style.display = "block";
+      nota.innerHTML = "Ø <b>estimado</b> (" + String(c.d).replace(".", ",") + " mm) — a WaveOne não " +
+        "publica o diâmetro externo. Estimativa de engenharia; confirme com paquímetro antes de fechar o projeto.";
+    } else {
+      nota.style.display = "none";
+    }
   }
   sel.addEventListener("change", sync);
   sync();
+
   row.leitura = function(){
-    return {nome: sel.selectedOptions[0].textContent, d: parseFloat(diam.value)};
+    var c = acha(sel.value);
+    var nome = sel.selectedOptions[0].textContent;
+    return {nome: (c && c.est ? nome + " · Ø est." : nome), d: parseFloat(diam.value)};
   };
 }
+
+function linhaDados(row){ linhaCatalogo(row, {cat:true}); }
+function linhaSom(row){ linhaCatalogo(row, {cat:false}); }
 
 /* Linha de cabo — energia, catálogo Prysmian em cascata */
 function linhaEnergia(row){
@@ -475,7 +555,10 @@ function addCableRow(){
   var row = document.createElement("div");
   row.className = "cable-row";
   row.dataset.id = ++seq;
-  if(normaAtual() === "dados") linhaDados(row); else linhaEnergia(row);
+  var n = normaAtual();
+  if(n === "dados") linhaDados(row);
+  else if(n === "som") linhaSom(row);
+  else linhaEnergia(row);
   row.querySelector(".del").addEventListener("click", function(){
     if(cablesEl.children.length > 1) row.remove();
   });
@@ -753,30 +836,39 @@ function packRetangulo(circulos, L, H){
   return {postos:postos, sobra:sobra};
 }
 
-/* ---------- Desenho ---------- */
-function desenharCorte(res){
+/* ---------- Geometria em mm (compartilhada por desenho SVG e export DXF) ----------
+   Eletroduto: postos com x,y relativos ao centro. Retângulo: x,y a partir do
+   canto inferior esquerdo interno, y crescendo para cima. */
+function geometriaCorte(res){
   var circulos = listaCirculos(res.cabos);
-  var W = 460, pad = 26, out, vb, forma;
-
   if(res.tipo === "eletroduto"){
     var R = res.a / 2;
-    out = packCirculo(circulos, R);
+    var o = packCirculo(circulos, R);
+    return {tipo:"eletroduto", R:R, postos:o.postos, sobra:o.sobra};
+  }
+  var o2 = packRetangulo(circulos, res.a, res.b);
+  return {tipo:res.tipo, L:res.a, H:res.b, postos:o2.postos, sobra:o2.sobra};
+}
+
+/* ---------- Desenho ---------- */
+function desenharCorte(res){
+  var g = geometriaCorte(res);
+  var W = 460, pad = 26, vb, forma, pts;
+
+  if(g.tipo === "eletroduto"){
+    var R = g.R;
     var esp = Math.max(R * 0.06, 1.2);            // parede desenhada
     var meio = R + esp + pad;
     vb = [0, 0, meio*2, meio*2];
     forma =
       '<circle cx="'+meio+'" cy="'+meio+'" r="'+(R+esp/2)+'" fill="#fff" stroke="#8A94AC" stroke-width="'+esp+'"/>' +
       '<circle cx="'+meio+'" cy="'+meio+'" r="'+R+'" fill="none" stroke="#C7CEDC" stroke-width="0.5"/>';
-    var cx = meio, cy = meio;
-    var pts = out.postos.map(function(p){
-      return {x:cx + p.x, y:cy + p.y, r:p.r, g:p.g};
-    });
-    return montarSVG(vb, forma, pts, out.sobra, W,
+    pts = g.postos.map(function(p){ return {x:meio + p.x, y:meio + p.y, r:p.r, g:p.g}; });
+    return montarSVG(vb, forma, pts, g.sobra, W,
       Math.round(res.a*10)/10 + " mm (Ø interno)");
   }
 
-  var L = res.a, H = res.b;
-  out = packRetangulo(circulos, L, H);
+  var L = g.L, H = g.H;
   var espR = Math.max(Math.min(L,H) * 0.04, 1.2);
   var ox = espR + pad, oy = espR + pad;
   vb = [0, 0, L + 2*ox, H + 2*oy];
@@ -785,11 +877,334 @@ function desenharCorte(res){
       'fill="#fff" stroke="#8A94AC" stroke-width="'+espR+'"/>' +
     '<rect x="'+ox+'" y="'+oy+'" width="'+L+'" height="'+H+'" fill="none" stroke="#C7CEDC" stroke-width="0.5"/>';
   // y do empacotamento cresce para cima; o SVG cresce para baixo — inverte.
-  var pts = out.postos.map(function(p){
-    return {x:ox + p.x, y:oy + (H - p.y), r:p.r, g:p.g};
-  });
-  return montarSVG(vb, forma, pts, out.sobra, W,
+  pts = g.postos.map(function(p){ return {x:ox + p.x, y:oy + (H - p.y), r:p.r, g:p.g}; });
+  return montarSVG(vb, forma, pts, g.sobra, W,
     Math.round(L) + " × " + Math.round(H) + " mm (internas)");
+}
+
+/* ============================================================
+   EXPORTAÇÃO DXF — vista de corte em escala real (1:1 mm)
+   ------------------------------------------------------------
+   Gera DXF ASCII R12 (AC1009): o formato de intercâmbio mais
+   amplamente aceito. Contorno da infra + cada cabo como CIRCLE
+   real em mm, em layers por tipo, mais um bloco de texto com o
+   veredito e a lista de cabos. Só ASCII (acentos removidos) para
+   compatibilidade de codepage em qualquer CAD.
+   ============================================================ */
+
+// Cores ACI aproximadas para os tipos de cabo (a paleta da tela).
+var ACI = [1, 5, 3, 4, 6, 2, 30, 150, 40, 10];
+
+function asciiFold(s){
+  return String(s)
+    .replace(/×/g, "x").replace(/Ω/g, " ohm").replace(/[Øø]/g, "")
+    .replace(/²/g, "2").replace(/³/g, "3").replace(/[—–]/g, "-").replace(/·/g, "-")
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^\x20-\x7E]/g, "?").trim();
+}
+
+// Texto do desenho: mantém acentos e símbolos que existem em Latin-1/ANSI_1252
+// (², ×, Ø, ·, ç, ã…), para o DXF sair igual ao que aparece no app. O arquivo é
+// gravado em Latin-1 com $DWGCODEPAGE ANSI_1252. Só o que não cabe em 1 byte é
+// substituído (Ω → ohm, travessão → hífen).
+function latin1Fold(s){
+  return String(s)
+    .replace(/Ω/g, " ohm")
+    .replace(/[—–]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+    .split("").map(function(ch){ return ch.charCodeAt(0) <= 0xFF ? ch : "?"; }).join("");
+}
+
+function normaRotulo(){
+  var n = normaAtual();
+  if(n === "dados") return "ABNT NBR 16415:2015";
+  return "ABNT NBR 5410:2004";
+}
+
+function statusExport(txt, cor){
+  var el = document.querySelector(".export-hint");
+  if(el){ el.textContent = txt; el.style.color = cor || ""; }
+}
+
+function baixar(nome, texto, mime){
+  // O texto já está restrito a Latin-1; converte para bytes 1:1.
+  var bytes = new Uint8Array(texto.length);
+  for(var i = 0; i < texto.length; i++) bytes[i] = texto.charCodeAt(i) & 0xFF;
+
+  // No app instalado (Electron): grava em Downloads e abre o Explorer.
+  if(window.zeplin && window.zeplin.salvarArquivo){
+    statusExport("Salvando…");
+    window.zeplin.salvarArquivo(nome, bytes).then(function(r){
+      if(r && r.ok) statusExport("✓ Salvo em: " + r.filePath, "var(--ok)");
+      else statusExport("Falha ao salvar: " + ((r && r.error) || "desconhecida"), "var(--bad)");
+    }).catch(function(e){ statusExport("Falha ao salvar: " + e, "var(--bad)"); });
+    return;
+  }
+  // Fallback navegador: download por blob.
+  try{
+    var blob = new Blob([bytes], {type: mime});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 0);
+    statusExport("DXF gerado — verifique a pasta de downloads.");
+  }catch(e){
+    statusExport("Falha ao gerar o arquivo: " + e, "var(--bad)");
+  }
+}
+
+function exportarDXF(res, verd){
+  var g = geometriaCorte(res);
+  var round = function(v){ return Math.round(v * 1000) / 1000; };
+
+  var W, H, outline, cables = [];
+  if(g.tipo === "eletroduto"){
+    var R = g.R; W = 2*R; H = 2*R;
+    outline = {tipo:"circ", x:R, y:R, r:R};
+    g.postos.forEach(function(p){ cables.push({x:R + p.x, y:R + p.y, r:p.r, g:p.g}); });
+  } else {
+    W = g.L; H = g.H;
+    outline = {tipo:"rect", L:g.L, H:g.H};
+    g.postos.forEach(function(p){ cables.push({x:p.x, y:p.y, r:p.r, g:p.g}); });
+  }
+
+  // Layers: INFRA, TEXTO e uma por tipo de cabo.
+  var layers = [{name:"INFRA", aci:8}, {name:"TEXTO", aci:7}, {name:"AVISO", aci:1}];
+  var grpLayer = res.cabos.map(function(c, i){
+    var nm = ("CABO_" + (i+1) + "_" + asciiFold(c.nome).replace(/[^A-Za-z0-9]+/g, "_"))
+      .replace(/_+/g, "_").replace(/_$/, "").slice(0, 28);
+    layers.push({name:nm, aci:ACI[i % ACI.length], cor:PALETA[i % PALETA.length]});
+    return nm;
+  });
+
+  // ---- Layout do texto calculado ANTES de emitir ----
+  // Precisa ser antes porque o desenho inteiro é deslocado para o primeiro
+  // quadrante (coordenadas positivas) e as extensões vão declaradas no header:
+  // visualizadores que recortam pelos limites cortavam o texto que ficava em Y
+  // negativo, abaixo da seção.
+  var th = Math.max(Math.max(W,H) * 0.055, 1.4);   // altura do texto
+  var ms = th * 0.85;                              // marcador colorido
+  var temEst = false;
+  var itens = [];
+  var yy = -th * 1.6;
+
+  res.cabos.forEach(function(c, i){
+    var est = /Ø est\./.test(c.nome); if(est) temEst = true;
+    var nomeBase = c.nome.replace(/\s*·\s*Ø est\.\s*$/, "");
+    itens.push({marc: grpLayer[i], y: yy});
+    itens.push({txt: nomeBase + (est ? " - diam. est." : "") + " - diam. " + fmt(c.d,1) +
+                     " mm - " + c.q + "x", x: ms + th * 0.6, y: yy});
+    yy -= th * 1.7;
+  });
+
+  yy -= th * 0.5;
+  itens.push({txt: "Vista de corte - " + res.nomeInfra + ", " + (g.tipo === "eletroduto"
+    ? fmt(res.a,1) + " mm (diam. interno)"
+    : Math.round(g.L) + " x " + Math.round(g.H) + " mm (internas)"), x: 0, y: yy});
+  yy -= th * 1.7;
+  itens.push({txt: "Ocupacao " + fmt(res.taxa,1) + " % - limite " + res.regra.texto, x: 0, y: yy});
+  yy -= th * 1.7;
+  itens.push({txt: "Situacao: " + ((verd && verd.tag) ? verd.tag : (res.aprovado ? "Atende" : "Nao atende")) +
+                   " - " + normaRotulo(), x: 0, y: yy});
+  if(g.sobra > 0){
+    yy -= th * 1.7;
+    itens.push({txt: g.sobra + " cabo" + (g.sobra === 1 ? "" : "s") + " nao couberam na secao e nao aparece" +
+                     (g.sobra === 1 ? "" : "m") + " no desenho.", x: 0, y: yy, layer: "AVISO"});
+  }
+  if(temEst){
+    yy -= th * 1.7;
+    itens.push({txt: "diam. est. = diametro estimado (WaveOne) - confira com paquimetro", x: 0, y: yy});
+  }
+
+  var margem = th;
+  var dy = -(yy - th * 0.4) + margem;              // desloca tudo para Y positivo
+  var largTxt = 0;
+  itens.forEach(function(it){
+    if(it.txt) largTxt = Math.max(largTxt, it.x + it.txt.length * th * 0.62);
+  });
+  var extX = Math.max(W, largTxt) + margem;
+  var extY = H + dy + margem;
+
+  // ============================================================
+  // DXF R2000 (AC1015). O Revit importa DWG/DXF do AutoCAD R14 em diante;
+  // o R12 (AC1009) usado antes fica ABAIXO dessa faixa e ele descarta
+  // elementos na importação. O R2000 exige handles em toda entidade,
+  // marcadores de subclasse, a tabela BLOCK_RECORD com o *Model_Space
+  // e a seção OBJECTS.
+  // Entidades limitadas a CIRCLE, LINE e TEXT — os tipos que qualquer
+  // importador aceita. Sem SOLID: o preenchimento dos cabos eram ~20
+  // SOLIDs por cabo e é o tipo mais provável de ser rejeitado.
+  // ============================================================
+  var D = [];
+  var w = function(code, val){ D.push(String(code)); D.push(String(val)); };
+  var seqH = 0x100;
+  var nh = function(){ return (seqH++).toString(16).toUpperCase(); };
+
+  var hTabVport = nh(), hTabLtype = nh(), hTabLayer = nh(), hTabStyle = nh(),
+      hTabView  = nh(), hTabUcs   = nh(), hTabAppid = nh(), hTabDim   = nh(),
+      hTabBlk   = nh(), hBrMS     = nh(), hBrPS     = nh();
+  // Dicionários de OBJECTS. O hPlaceholder é apontado pelo código 390
+  // (PlotStyleName) de cada layer — sem ele o parser da Autodesk rejeita o
+  // arquivo inteiro com "Invalid or incomplete DXF input -- drawing discarded".
+  var hRootDic = nh(), hGroupDic = nh(), hPlotDic = nh(), hPlaceholder = nh();
+
+  // HEADER
+  w(0,"SECTION"); w(2,"HEADER");
+  w(9,"$ACADVER"); w(1,"AC1015");
+  w(9,"$HANDSEED"); w(5,"FFFF");
+  w(9,"$INSUNITS"); w(70,4);            // 4 = milímetros
+  w(9,"$DWGCODEPAGE"); w(3,"ANSI_1252");
+  // Extensões e limites: sem isso alguns visualizadores recortam o desenho.
+  w(9,"$EXTMIN"); w(10,0.0); w(20,0.0); w(30,0.0);
+  w(9,"$EXTMAX"); w(10,round(extX)); w(20,round(extY)); w(30,0.0);
+  w(9,"$LIMMIN"); w(10,0.0); w(20,0.0);
+  w(9,"$LIMMAX"); w(10,round(extX)); w(20,round(extY));
+  w(0,"ENDSEC");
+
+  w(0,"SECTION"); w(2,"CLASSES"); w(0,"ENDSEC");
+
+  // TABLES
+  w(0,"SECTION"); w(2,"TABLES");
+
+  w(0,"TABLE"); w(2,"VPORT"); w(5,hTabVport); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,1);
+  w(0,"VPORT"); w(5,nh()); w(330,hTabVport);
+  w(100,"AcDbSymbolTableRecord"); w(100,"AcDbViewportTableRecord");
+  w(2,"*Active"); w(70,0);
+  w(10,0.0); w(20,0.0); w(11,1.0); w(21,1.0);
+  w(12,round(extX/2)); w(22,round(extY/2));
+  w(13,0.0); w(23,0.0); w(14,10.0); w(24,10.0); w(15,0.0); w(25,0.0);
+  w(16,0.0); w(26,0.0); w(36,1.0); w(17,0.0); w(27,0.0); w(37,0.0);
+  w(40,round(extY || 1)); w(41,round((extX || 1) / (extY || 1)));
+  w(42,50.0); w(43,0.0); w(44,0.0); w(50,0.0); w(51,0.0);
+  w(71,0); w(72,100); w(73,1); w(74,3); w(75,0); w(76,0); w(77,0); w(78,0);
+  w(0,"ENDTAB");
+
+  w(0,"TABLE"); w(2,"LTYPE"); w(5,hTabLtype); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,3);
+  ["ByBlock","ByLayer","Continuous"].forEach(function(n){
+    w(0,"LTYPE"); w(5,nh()); w(330,hTabLtype);
+    w(100,"AcDbSymbolTableRecord"); w(100,"AcDbLinetypeTableRecord");
+    w(2,n); w(70,0); w(3, n === "Continuous" ? "Solid line" : ""); w(72,65); w(73,0); w(40,0.0);
+  });
+  w(0,"ENDTAB");
+
+  w(0,"TABLE"); w(2,"LAYER"); w(5,hTabLayer); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,layers.length + 1);
+  var camada = function(nome, aci, cor){
+    w(0,"LAYER"); w(5,nh()); w(330,hTabLayer);
+    w(100,"AcDbSymbolTableRecord"); w(100,"AcDbLayerTableRecord");
+    w(2,nome); w(70,0); w(62,aci);
+    if(cor) w(420, parseInt(cor.slice(1), 16));         // cor exata do app
+    w(6,"Continuous");
+    w(370,-3);                                          // espessura: padrão
+    w(390,hPlaceholder);                                // PlotStyleName: obrigatório
+  };
+  camada("0", 7, null);                                 // layer "0", obrigatória
+  layers.forEach(function(ly){ camada(ly.name, ly.aci, ly.cor); });
+  w(0,"ENDTAB");
+
+  // STYLE: sem o estilo STANDARD, CADs estritos descartam as entidades TEXT.
+  w(0,"TABLE"); w(2,"STYLE"); w(5,hTabStyle); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,1);
+  w(0,"STYLE"); w(5,nh()); w(330,hTabStyle);
+  w(100,"AcDbSymbolTableRecord"); w(100,"AcDbTextStyleTableRecord");
+  w(2,"STANDARD"); w(70,0); w(40,0.0); w(41,1.0); w(50,0.0); w(71,0); w(42,2.5);
+  w(3,"arial.ttf"); w(4,"");
+  w(0,"ENDTAB");
+
+  w(0,"TABLE"); w(2,"VIEW"); w(5,hTabView); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,0);
+  w(0,"ENDTAB");
+  w(0,"TABLE"); w(2,"UCS"); w(5,hTabUcs); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,0);
+  w(0,"ENDTAB");
+  w(0,"TABLE"); w(2,"APPID"); w(5,hTabAppid); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,1);
+  w(0,"APPID"); w(5,nh()); w(330,hTabAppid);
+  w(100,"AcDbSymbolTableRecord"); w(100,"AcDbRegAppTableRecord"); w(2,"ACAD"); w(70,0);
+  w(0,"ENDTAB");
+  w(0,"TABLE"); w(2,"DIMSTYLE"); w(5,hTabDim); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,0);
+  w(100,"AcDbDimStyleTable"); w(71,0);
+  w(0,"ENDTAB");
+
+  w(0,"TABLE"); w(2,"BLOCK_RECORD"); w(5,hTabBlk); w(330,"0"); w(100,"AcDbSymbolTable"); w(70,2);
+  [["*Model_Space",hBrMS], ["*Paper_Space",hBrPS]].forEach(function(b){
+    w(0,"BLOCK_RECORD"); w(5,b[1]); w(330,hTabBlk);
+    w(100,"AcDbSymbolTableRecord"); w(100,"AcDbBlockTableRecord"); w(2,b[0]); w(70,0);
+  });
+  w(0,"ENDTAB");
+  w(0,"ENDSEC");
+
+  // BLOCKS: os dois blocos de espaço precisam existir de fato.
+  w(0,"SECTION"); w(2,"BLOCKS");
+  [["*Model_Space",hBrMS], ["*Paper_Space",hBrPS]].forEach(function(b){
+    w(0,"BLOCK"); w(5,nh()); w(330,b[1]);
+    w(100,"AcDbEntity"); w(8,"0"); w(100,"AcDbBlockBegin");
+    w(2,b[0]); w(70,0); w(10,0.0); w(20,0.0); w(30,0.0); w(3,b[0]); w(1,"");
+    w(0,"ENDBLK"); w(5,nh()); w(330,b[1]);
+    w(100,"AcDbEntity"); w(8,"0"); w(100,"AcDbBlockEnd");
+  });
+  w(0,"ENDSEC");
+
+  // ENTITIES
+  w(0,"SECTION"); w(2,"ENTITIES");
+
+  // Tudo é emitido com +dy para ficar em coordenadas positivas.
+  var Y = function(v){ return round(v + dy); };
+  var ent = function(tipo, layer, sub){
+    w(0,tipo); w(5,nh()); w(330,hBrMS);
+    w(100,"AcDbEntity"); w(8,layer); w(100,sub);
+  };
+
+  if(outline.tipo === "circ"){
+    ent("CIRCLE","INFRA","AcDbCircle");
+    w(10,round(outline.x)); w(20,Y(outline.y)); w(30,0.0); w(40,round(outline.r));
+  } else {
+    var pts = [[0,0],[outline.L,0],[outline.L,outline.H],[0,outline.H]];
+    for(var i = 0; i < 4; i++){
+      var a = pts[i], b = pts[(i+1) % 4];
+      ent("LINE","INFRA","AcDbLine");
+      w(10,round(a[0])); w(20,Y(a[1])); w(30,0.0);
+      w(11,round(b[0])); w(21,Y(b[1])); w(31,0.0);
+    }
+  }
+  cables.forEach(function(c){
+    ent("CIRCLE", grpLayer[c.g] || "INFRA", "AcDbCircle");
+    w(10,round(c.x)); w(20,Y(c.y)); w(30,0.0); w(40,round(c.r));
+  });
+
+  // Legenda e caption (posições já calculadas acima), agora deslocadas.
+  itens.forEach(function(it){
+    if(it.marc){
+      ent("CIRCLE", it.marc, "AcDbCircle");
+      w(10,round(ms/2)); w(20,Y(it.y + ms/2)); w(30,0.0); w(40,round(ms/2));
+    } else {
+      ent("TEXT", it.layer || "TEXTO", "AcDbText");
+      w(10,round(it.x)); w(20,Y(it.y)); w(30,0.0);
+      w(40,round(th)); w(1, asciiFold(it.txt)); w(7,"STANDARD");
+      w(100,"AcDbText"); w(73,0);
+    }
+  });
+  w(0,"ENDSEC");
+
+  // OBJECTS: dicionário raiz + o dicionário de plot styles que as layers
+  // referenciam pelo código 390.
+  w(0,"SECTION"); w(2,"OBJECTS");
+
+  w(0,"DICTIONARY"); w(5,hRootDic); w(330,"0"); w(100,"AcDbDictionary"); w(281,1);
+  w(3,"ACAD_GROUP");         w(350,hGroupDic);
+  w(3,"ACAD_PLOTSTYLENAME"); w(350,hPlotDic);
+
+  w(0,"DICTIONARY"); w(5,hGroupDic); w(330,hRootDic); w(100,"AcDbDictionary"); w(281,1);
+
+  w(0,"ACDBDICTIONARYWDFLT"); w(5,hPlotDic); w(330,hRootDic);
+  w(100,"AcDbDictionary"); w(281,1); w(3,"Normal"); w(350,hPlaceholder);
+  w(100,"AcDbDictionaryWithDefault"); w(340,hPlaceholder);
+
+  w(0,"ACDBPLACEHOLDER"); w(5,hPlaceholder); w(330,hPlotDic);
+
+  w(0,"ENDSEC");
+  w(0,"EOF");
+
+  var pct = fmt(res.taxa,1).replace(/[.,]/g, "");
+  baixar("ocupacao-corte-" + pct + "pct.dxf", D.join("\r\n") + "\r\n", "application/dxf");
 }
 
 function montarSVG(vb, forma, pts, sobra, larguraAlvo, rotulo){
@@ -894,6 +1309,11 @@ function renderResult(res){
       '</div>' +
     '</div>' +
 
+    '<div class="export">' +
+      '<button class="btn btn-exp" id="btnDXF">⭳ Exportar vista de corte (DXF)</button>' +
+      '<span class="export-hint">Geometria 1:1 em mm — abre em qualquer CAD (AutoCAD, BricsCAD, QCAD…).</span>' +
+    '</div>' +
+
     '<table style="margin-top:18px">' +
       '<thead><tr><th>Cabo</th><th class="n">Ø (mm)</th><th class="n">Qtd</th><th class="n">Área (mm²)</th></tr></thead>' +
       '<tbody>' + linhas + '</tbody>' +
@@ -917,11 +1337,19 @@ function renderResult(res){
       ? '<br><br><b>Diâmetros:</b> catálogo Prysmian <i>Cabos de Baixa e Média Tensão</i> — coluna "Diâmetro exterior aproximado". ' +
         'É o portfólio europeu (designações EN/UNE: H07V-K, RV-K, RZ1-K, RHZ1). Confira contra o produto realmente especificado ' +
         'antes de fechar o projeto; o campo Ø é editável.'
+      : normaAtual() === "som"
+      ? '<br><br><b>Diâmetros:</b> linha WaveOne de som/sinal. A WaveOne não publica o diâmetro externo — os valores são ' +
+        'estimativas de engenharia (marcados como "Ø est."). Confirme com paquímetro; o campo Ø é editável.' +
+        '<br><b>Por que NBR 5410 e não 16415:</b> cabo de som/sinal é linha de sinal — em eletroduto a taxa acompanha o ' +
+        'número de cabos (53 % / 31 % / 40 %), em vez dos 40 % fixos da NBR 16415.'
       : '') +
     '<br><br><b>Sobre o desenho:</b> o arranjo mostrado é ilustrativo — os cabos são acomodados por gravidade ' +
     'para o centro (eletroduto) ou para o fundo (eletrocalha e perfilado). Na obra a disposição real varia com o ' +
     'puxamento e o agrupamento. A aprovação acima vem do cálculo de áreas exigido pela norma, não da geometria do desenho.' +
     '</div>';
+
+  var btn = document.getElementById("btnDXF");
+  if(btn) btn.addEventListener("click", function(){ exportarDXF(res, {tag: tag}); });
 }
 
 document.getElementById("calc").addEventListener("click", function(){

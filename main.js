@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu, dialog, shell } = require("electron");
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 const SOBRE =
   "Verificação de ocupação de eletrodutos, eletrocalhas e perfilados.\n\n" +
@@ -25,7 +26,8 @@ function criarJanela() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      spellcheck: false
+      spellcheck: false,
+      preload: path.join(__dirname, "preload.js")
     }
   });
 
@@ -84,6 +86,31 @@ function montarMenu(win) {
     }
   ]));
 }
+
+// Salvar arquivo (ex.: DXF) direto na pasta Downloads e revelar no Explorer.
+// Sem diálogo "Salvar como": em algumas máquinas ele não abria e a exportação
+// ficava pendurada sem retorno. Gravar direto é determinístico e o Explorer
+// abre destacando o arquivo, então o usuário sempre vê onde ele foi parar.
+ipcMain.handle("salvar-arquivo", async (evt, arg) => {
+  try {
+    const dir = app.getPath("downloads");
+    const base = arg.nomeSugerido || "export.dxf";
+    const ext = path.extname(base);
+    const stem = path.basename(base, ext);
+
+    let destino = path.join(dir, base);
+    let n = 1;
+    while (fs.existsSync(destino)) {
+      destino = path.join(dir, stem + " (" + n++ + ")" + ext);
+    }
+
+    fs.writeFileSync(destino, Buffer.from(arg.bytes));
+    shell.showItemInFolder(destino);
+    return { ok: true, filePath: destino };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  }
+});
 
 // Uma instância só: abrir de novo traz a janela existente para frente.
 if (!app.requestSingleInstanceLock()) {
