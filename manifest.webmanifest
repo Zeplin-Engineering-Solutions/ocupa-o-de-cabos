@@ -1,0 +1,17 @@
+{
+  "name": "Zeplin — Ocupação de Cabos",
+  "short_name": "Ocupação",
+  "description": "Verificação de ocupação de eletrodutos, eletrocalhas e perfilados conforme ABNT NBR 5410 e ABNT NBR 16415.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6FA",
+  "theme_color": "#151D33",
+  "icons": [
+    { "src": "./icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "./icon-512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "./icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

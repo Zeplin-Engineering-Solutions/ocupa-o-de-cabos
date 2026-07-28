@@ -4,6 +4,9 @@ node_modules/
 # saída de build — o instalador tem 95 MB, não vai para o repositório
 dist/
 
+# pasta de deploy da PWA, montada por `npm run web`
+dist-web/
+
 # ícone gerado a partir de logo.png por scripts/make-icon.js
 build/
 

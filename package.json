@@ -8,9 +8,11 @@
   "private": true,
   "scripts": {
     "icone": "node scripts/make-icon.js",
+    "icone-pwa": "node scripts/make-pwa-icons.js",
     "start": "electron .",
     "dist": "npm run icone && electron-builder --win",
-    "dist:portatil": "npm run icone && electron-builder --win portable"
+    "dist:portatil": "npm run icone && electron-builder --win portable",
+    "web": "npm run icone-pwa && node scripts/build-web.js"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -29,6 +31,9 @@
       "main.js",
       "preload.js",
       "index.html",
+      "manifest.webmanifest",
+      "icon-192.png",
+      "icon-512.png",
       "logo.png",
       "build/icon.png"
     ],
